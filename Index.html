@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pimenta Rosa - Plano Estratégico de Logística</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    body {
+      background-color: #050203;
+      color: #ffffff;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .wrapper {
+      position: relative;
+      width: 100vw;
+      max-width: 1280px;
+      aspect-ratio: 16 / 9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 20px 50px rgba(255, 0, 127, 0.15);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 0, 127, 0.2);
+      background: #000;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .controls {
+      position: absolute;
+      bottom: 20px;
+      display: flex;
+      gap: 12px;
+      z-index: 10;
+      background: rgba(10, 5, 8, 0.75);
+      padding: 10px 20px;
+      border-radius: 30px;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 0, 127, 0.3);
+    }
+    button {
+      background: linear-gradient(135deg, #ff007f, #b30059);
+      color: white;
+      border: none;
+      padding: 10px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(255, 0, 127, 0.5);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .watermark {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.4);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      z-index: 5;
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrapper">
+  <canvas id="stage" width="1920" height="1080"></canvas>
+  <div class="watermark">Projeto Acadêmico • Simulação Logística</div>
+  <div class="controls">
+    <button id="btnPlay">▶ Iniciar Apresentação</button>
+    <button id="btnExport">📥 Baixar Vídeo (MP4/WebM)</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+const btnPlay = document.getElementById('btnPlay');
+const btnExport = document.getElementById('btnExport');
+
+const DURATION = 18; // 18 segundos
+let animationFrameId = null;
+let startTime = null;
+let isPlaying = false;
+let audioCtx = null;
+
+// ÁUDIO SINTETIZADO (Web Audio API)
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+}
+
+function playSound(type) {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  if (type === 'whoosh') {
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(600, now + 0.3);
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    osc.start(now);
+    osc.stop(now + 0.3);
+  } else if (type === 'pop') {
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(523.25, now);
+    osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.15);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    osc.start(now);
+    osc.stop(now + 0.15);
+  } else if (type === 'synth') {
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(110, now);
+    osc.frequency.exponentialRampToValueAtTime(220, now + 0.5);
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+    osc.start(now);
+    osc.stop(now + 0.5);
+  }
+}
+
+// LOGO DESENHADA VIA CANVAS
+function drawLogo(x, y, scale = 1) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+
+  // Círculo base
+  ctx.beginPath();
+  ctx.arc(0, 0, 180, 0, Math.PI * 2);
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Lábios / Pimenta Ilustrativos
+  ctx.fillStyle = "#ff007f";
+  ctx.beginPath();
+  ctx.ellipse(0, -50, 60, 25, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#d6004c";
+  ctx.beginPath();
+  ctx.ellipse(0, -38, 45, 15, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Texto Pimenta Rosa
+  ctx.font = "italic bold 42px 'Playfair Display', Georgia, serif";
+  ctx.fillStyle = "#ff007f";
+  ctx.textAlign = "center";
+  ctx.shadowColor = "#ff007f";
+  ctx.shadowBlur = 10;
+  ctx.fillText("Pimenta Rosa", 0, 30);
+
+  // Subtexto
+  ctx.shadowBlur = 0;
+  ctx.font = "600 16px 'Montserrat', sans-serif";
+  ctx.fillStyle = "#ffffff";
+  ctx.letterSpacing = "3px";
+  ctx.fillText("SEX SHOP & PRAZER", 0, 75);
+
+  ctx.font = "italic 14px Georgia, serif";
+  ctx.fillStyle = "#ff80bf";
+  ctx.fillText('"Apimente seus desejos."', 0, 120);
+
+  ctx.restore();
+}
+
+// RENDERIZAÇÃO PRINCIPAL
+function render(t) {
+  ctx.clearRect(0, 0, 1920, 1080);
+
+  // Fundo dinâmico luxuoso
+  const bgGrad = ctx.createRadialGradient(960, 540, 100, 960, 540, 1200);
+  bgGrad.addColorStop(0, "#2a0015");
+  bgGrad.addColorStop(0.5, "#0d0208");
+  bgGrad.addColorStop(1, "#000000");
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, 1920, 1080);
+
+  // Linha neon constante que conecta tudo
+  ctx.beginPath();
+  ctx.moveTo(0, 900);
+  ctx.bezierCurveTo(480, 850 + Math.sin(t * 2) * 30, 1440, 950 + Math.cos(t * 2) * 30, 1920, 900);
+  ctx.strokeStyle = "rgba(255, 0, 127, 0.6)";
+  ctx.lineWidth = 6;
+  ctx.shadowColor = "#ff007f";
+  ctx.shadowBlur = 15;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // CENA 1 (0s a 3s)
+  if (t < 3) {
+    const alpha = Math.min(1, t);
+    ctx.globalAlpha = alpha;
+
+    drawLogo(960, 480, 1.1 + Math.sin(t) * 0.05);
+
+    ctx.font = "bold 32px 'Montserrat', sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.fillText("PLANO ESTRATÉGICO DE LOGÍSTICA", 960, 780);
+  }
+
+  // CENA 2 (3s a 6s)
+  else if (t >= 3 && t < 6) {
+    const progress = (t - 3) / 3;
+    ctx.globalAlpha = 1;
+
+    ctx.font = "300 24px 'Montserrat', sans-serif";
+    ctx.fillStyle = "#ff80bf";
+    ctx.textAlign = "center";
+    ctx.fillText("DO FORNECEDOR AO CLIENTE", 960, 300);
+
+    // Fluxo Fornecedor -> Recebimento -> Estoque
+    const steps = ["FORNECEDOR", "RECEBIMENTO", "ESTOQUE"];
+    steps.forEach((step, idx) => {
+      if (progress > idx * 0.3) {
+        const x = 480 + idx * 480;
+        ctx.beginPath();
+        ctx.arc(x, 540, 70, 0, Math.PI * 2);
+        ctx.fillStyle = "#ff007f";
+        ctx.shadowColor = "#ff007f";
+        ctx.shadowBlur = 20;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.font = "bold 20px 'Montserrat', sans-serif";
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(step, x, 548);
+      }
+    });
+  }
+
+  // CENA 3 (6s a 9s)
+  else if (t >= 6 && t < 9) {
+    ctx.globalAlpha = 1;
+
+    ctx.font = "bold 48px 'Montserrat', sans-serif";
+    ctx.fillStyle = "#ff007f";
+    ctx.shadowColor = "#ff007f";
+    ctx.shadowBlur = 15;
+    ctx.textAlign = "center";
+    ctx.fillText("CONTROLE DE ESTOQUE", 960, 320);
+    ctx.shadowBlur = 0;
+
+    const items = ["✓ Reposição Estratégica", "✓ Organização Inteligente", "✓ Estoque Mínimo Otimizado"];
+    items.forEach((item, idx) => {
+      const delay = (t - 6) - idx * 0.6;
+      if (delay > 0) {
+        ctx.font = "500 28px 'Montserrat', sans-serif";
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(item, 960, 460 + idx * 70);
+      }
+    });
+  }
+
+  // CENA 4 (9s a 12s)
+  else if (t >= 9 && t < 12) {
+    ctx.globalAlpha = 1;
+
+    ctx.font = "bold 48px 'Montserrat', sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.fillText("PEDIDOS MAIS ÁGEIS", 960, 320);
+
+    const steps = ["SEPARAÇÃO", "EMBALAGEM", "EXPEDIÇÃO"];
+    steps.forEach((step, idx) => {
+      const x = 480 + idx * 480;
+      ctx.fillStyle = "rgba(255, 0, 127, 0.2)";
+      ctx.fillRect(x - 120, 480, 240, 100);
+      ctx.strokeStyle = "#ff007f";
+      ctx.strokeRect(x - 120, 480, 240, 100);
+
+      ctx.font = "bold 20px 'Montserrat', sans-serif";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(step, x, 540);
+    });
+  }
+
+  // CENA 5 (12s a 15s)
+  else if (t >= 12 && t < 15) {
+    ctx.globalAlpha = 1;
+
+    ctx.font = "bold 48px 'Montserrat', sans-serif";
+    ctx.fillStyle = "#ff007f";
+    ctx.shadowColor = "#ff007f";
+    ctx.shadowBlur = 15;
+    ctx.textAlign = "center";
+    ctx.fillText("ROTEIRIZAÇÃO", 960, 280);
+    ctx.shadowBlur = 0;
+
+    ctx.font = "300 24px 'Montserrat', sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText("Mais agilidade e menos distância", 960, 340);
+
+    // Rota Roteirizada no Mapa
+    const prog = (t - 12) / 3;
+    ctx.beginPath();
+    ctx.moveTo(500, 600);
+    ctx.lineTo(500 + prog * 920, 600 + Math.sin(prog * 10) * 40);
+    ctx.strokeStyle = "#ff007f";
+    ctx.lineWidth = 8;
+    ctx.shadowColor = "#ff007f";
+    ctx.shadowBlur = 20;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // CENA 6 (15s a 18s)
+  else if (t >= 15) {
+    ctx.globalAlpha = 1;
+
+    drawLogo(960, 450, 1.1);
+
+    ctx.font = "bold 38px 'Montserrat', sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.fillText("LOGÍSTICA QUE CONECTA VOCÊ", 960, 750);
+
+    ctx.font = "300 20px 'Montserrat', sans-serif";
+    ctx.fillStyle = "#ff80bf";
+    ctx.fillText("Projeto Acadêmico", 960, 800);
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+let lastScene = -1;
+
+function tick(timestamp) {
+  if (!startTime) startTime = timestamp;
+  const elapsed = (timestamp - startTime) / 1000;
+
+  const currentScene = Math.floor(elapsed / 3);
+  if (currentScene !== lastScene) {
+    lastScene = currentScene;
+    playSound('whoosh');
+  }
+
+  render(elapsed);
+
+  if (elapsed < DURATION) {
+    animationFrameId = requestAnimationFrame(tick);
+  } else {
+    isPlaying = false;
+    btnPlay.innerText = "▶ Reiniciar Apresentação";
+  }
+}
+
+btnPlay.addEventListener('click', () => {
+  initAudio();
+  if (isPlaying) {
+    cancelAnimationFrame(animationFrameId);
+  }
+  startTime = null;
+  lastScene = -1;
+  isPlaying = true;
+  btnPlay.innerText = "🔄 Reproduzindo...";
+  animationFrameId = requestAnimationFrame(tick);
+});
+
+// EXPORTAÇÃO DE VÍDEO MP4/WEBM
+btnExport.addEventListener('click', async () => {
+  initAudio();
+  btnExport.disabled = true;
+  btnExport.innerText = "⏳ Gravando Vídeo...";
+
+  const stream = canvas.captureStream(30);
+  const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+  const chunks = [];
+
+  mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+  mediaRecorder.onstop = () => {
+    const blob = new Blob(chunks, { type: 'video/mp4' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Pimenta_Rosa_Plano_Logistica.mp4';
+    a.click();
+    btnExport.disabled = false;
+    btnExport.innerText = "📥 Baixar Vídeo (MP4/WebM)";
+  };
+
+  mediaRecorder.start();
+  startTime = null;
+  lastScene = -1;
+  isPlaying = true;
+  
+  function exportTick(timestamp) {
+    if (!startTime) startTime = timestamp;
+    const elapsed = (timestamp - startTime) / 1000;
+    render(elapsed);
+
+    if (elapsed < DURATION) {
+      requestAnimationFrame(exportTick);
+    } else {
+      mediaRecorder.stop();
+      isPlaying = false;
+    }
+  }
+
+  requestAnimationFrame(exportTick);
+});
+
+// Primeiro frame
+render(0);
+</script>
+</body>
+</html>
